@@ -1,0 +1,37 @@
+
+CREATE OR REPLACE FUNCTION public.promijeni_desnu_stranu(text, text, text) RETURNS VOID
+AS $$
+DECLARE 
+	i int;
+	y int;
+	broj_FZ int;
+	duljina_l int;
+	duljina_d int;
+	sadrzaj_l varchar[];
+	sadrzaj_d varchar[];
+	stringZaUpdate varchar;
+	lijevaStrana varchar;
+begin
+	sadrzaj_l := string_to_array($1, ' ');
+	duljina_l := array_length(sadrzaj_l, 1);
+	sadrzaj_d := string_to_array($2, ' ');
+	duljina_d := array_length(sadrzaj_d, 1);
+	stringZaUpdate := 'UPDATE pocetna_tablica SET ';
+	--update t set c=(select c from t order by c limit 1), d=(select d from t order by d limit 1) where a=1 and b=2;
+	--npr. SELECT count(*) FROM pocetna_tablica t1, pocetna_tablica t2 WHERE concat(t1.a, t1.b)=concat(t2.a, t2.b) and concat(t1.c, t1.d)<>concat(t2.c, t2.d);
+	for j in 1..duljina_d-1 loop
+		stringZaUpdate := concat(stringZaUpdate, sadrzaj_d[j], ' =(SELECT ', sadrzaj_d[j], ' FROM pocetna_tablica ORDER BY ', sadrzaj_d[j], ' limit 1), ');
+	end loop;
+	stringZaUpdate := concat(stringZaUpdate, sadrzaj_d[duljina_d], ' =(SELECT ', sadrzaj_d[duljina_d], ' FROM pocetna_tablica ORDER BY ', sadrzaj_d[duljina_d], ' limit 1) ');
+	stringZaUpdate := concat(stringZaUpdate, 'WHERE ');
+	for j in 1..duljina_l-1 loop
+		stringZaUpdate := concat(stringZaUpdate, sadrzaj_l[j], '=''', $3, ''' and ');
+	end loop;
+	stringZaUpdate := concat(stringZaUpdate, sadrzaj_l[duljina_l], '=''', $3, ''';');
+	
+	raise notice 'stringZaUpdate: %', stringZaUpdate;
+	execute stringZaUpdate;
+END $$
+LANGUAGE plpgsql;
+
+select promijeni_desnu_stranu('b','c', '0');
