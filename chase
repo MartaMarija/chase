@@ -1,0 +1,64 @@
+CREATE OR REPLACE FUNCTION public.chasealgO(TEXT[], TEXT[][], TEXT[][], TEXT[][], TEXT[], TEXT) RETURNS INT 
+AS $$
+DECLARE 
+	--stvaranje tablice
+	brojAtributa INT;
+	brojac INT;
+	--definiranje
+	pom INT;
+	broj_ZS INT;
+	stupac varchar;
+    zavisnost varchar;
+	i int;
+	y int;
+	red varchar[];
+	stringZaDodavanje varchar;
+	
+begin
+	--stvaranje tablice
+	drop table if exists pocetna_tablica;
+	create table pocetna_tablica();
+	brojAtributa := array_length($1, 1);
+	brojac := 1;
+	LOOP
+	    EXIT WHEN brojac = brojAtributa + 1;
+	   	EXECUTE 'ALTER TABLE pocetna_tablica ADD COLUMN ' || quote_ident($1[brojac]) || ' varchar(3);';
+	    brojac := brojac + 1;
+	END LOOP;
+	--definiranje zavisnosti koju provjeravamo/punjenje tablice
+	--punjenje tablice
+	case 
+		when $6 = 'FZ' then
+			pom := 1;
+		when $6 = 'VZ' then
+			pom := 2;
+		when $6 = 'ZS' then
+			broj_ZS := array_length($5, 1);
+			for i in 1..broj_ZS loop
+				for y in 0..brojAtributa-1 loop
+					stupac := (SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'pocetna_tablica'
+    					limit 1 offset y);
+    				zavisnost := $5[i];
+    				if zavisnost like '%' || stupac || '%' then
+    					red[y] := concat('a', y+1);
+					else
+						red[y] := concat('b', i, y+1);
+					end if;
+    			end loop;
+    			stringZaDodavanje := 'INSERT INTO pocetna_tablica VALUES (';
+    			for y in 0..brojAtributa-2 loop	
+	    			stringZaDodavanje := concat(stringZaDodavanje, '''', red[y], ''',');
+    			end loop;
+    			stringZaDodavanje := concat(stringZaDodavanje, '''', red[brojAtributa-1], ''');');
+    			execute stringZaDodavanje;
+   			end loop;
+	end case;
+	
+	return broj_ZS;
+END $$
+LANGUAGE plpgsql;
+
+
+select chasealgO(ARRAY ['a','b','c','d'], array[['a','c']], array[['a','b']], array[['ab', 'c', 'bd']], array['abc','bd'], 'ZS');
+
+    				--raise notice 'cnt: %', cnt;
